@@ -104,7 +104,7 @@ func Recoverer(logger logrus.FieldLogger) func(http.Handler) http.Handler {
 					switch vv := v.(type) {
 					case *Error:
 						if err := errors.Unwrap(vv); err != nil {
-							logger.WithError(vv).Error("recover panic")
+							logger.WithError(err).Error("recover panic")
 						}
 
 						WriteError(w, vv)
