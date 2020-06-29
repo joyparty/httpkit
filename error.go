@@ -98,7 +98,8 @@ func WriteError(w http.ResponseWriter, httpError *Error) error {
 	if h := httpError.Header; h != nil {
 		for key, values := range h {
 			for _, value := range values {
-				w.Header().Add(key, value)
+				w.Header().Set(key, value)
+				break
 			}
 		}
 	}
