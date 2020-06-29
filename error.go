@@ -11,8 +11,8 @@ import (
 
 // Error http错误
 type Error struct {
-	Header http.Header
-	Body   io.Reader
+	header http.Header
+	body   io.Reader
 	code   int
 	err    error
 }
@@ -49,6 +49,16 @@ func (e Error) StatusCode() int {
 	return http.StatusInternalServerError
 }
 
+// Header returns response header
+func (e Error) Header() http.Header {
+	return e.header
+}
+
+// Body returns response body reader
+func (e Error) Body() io.Reader {
+	return e.body
+}
+
 // WithStatus set response status code
 func (e *Error) WithStatus(code int) *Error {
 	e.code = code
@@ -57,16 +67,16 @@ func (e *Error) WithStatus(code int) *Error {
 
 // WithHeader set response header
 func (e *Error) WithHeader(key, value string) *Error {
-	if e.Header == nil {
-		e.Header = http.Header{}
+	if e.header == nil {
+		e.header = http.Header{}
 	}
-	e.Header.Set(key, value)
+	e.header.Set(key, value)
 	return e
 }
 
 // WithBody set response body
 func (e *Error) WithBody(r io.Reader) *Error {
-	e.Body = r
+	e.body = r
 	return e
 }
 
@@ -85,13 +95,13 @@ func (e *Error) WithJSON(v interface{}) error {
 // WithString set response body content
 func (e *Error) WithString(s string) *Error {
 	e.WithHeader("Content-Type", "text/plain")
-	e.Body = strings.NewReader(s)
+	e.body = strings.NewReader(s)
 	return e
 }
 
 // WithBytes set response body content
 func (e *Error) WithBytes(data []byte) *Error {
-	e.Body = bytes.NewReader(data)
+	e.body = bytes.NewReader(data)
 	return e
 }
 
@@ -99,7 +109,7 @@ func (e *Error) WithBytes(data []byte) *Error {
 func WriteError(w http.ResponseWriter, httpError *Error) error {
 	w.WriteHeader(httpError.StatusCode())
 
-	if h := httpError.Header; h != nil {
+	if h := httpError.Header(); h != nil {
 		for key, values := range h {
 			for _, value := range values {
 				w.Header().Set(key, value)
@@ -108,7 +118,7 @@ func WriteError(w http.ResponseWriter, httpError *Error) error {
 		}
 	}
 
-	if r := httpError.Body; r != nil {
+	if r := httpError.Body(); r != nil {
 		if _, err := io.Copy(w, r); err != nil {
 			return err
 		}
