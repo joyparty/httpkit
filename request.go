@@ -31,6 +31,15 @@ func ScanValues(dst interface{}, values url.Values) error {
 	return nil
 }
 
+// MustScanValue deocde request values, panic when error
+func MustScanValue(dst interface{}, values url.Values) {
+	if err := ScanValues(dst, values); err != nil {
+		panic(WrapError(err).
+			WithStatus(http.StatusBadRequest).
+			WithString(err.Error()))
+	}
+}
+
 // ScanJSON decode json and validate
 func ScanJSON(dst interface{}, r io.Reader) (int, error) {
 	if err := json.NewDecoder(r).Decode(dst); err != nil {
@@ -42,4 +51,13 @@ func ScanJSON(dst interface{}, r io.Reader) (int, error) {
 	}
 
 	return 0, nil
+}
+
+// MustScanJSON json decode request body, panic when error
+func MustScanJSON(dst interface{}, r io.Reader) {
+	if code, err := ScanJSON(dst, r); err != nil {
+		panic(WrapError(err).
+			WithStatus(code).
+			WithString(err.Error()))
+	}
 }
