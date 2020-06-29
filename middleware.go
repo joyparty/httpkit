@@ -1,6 +1,7 @@
 package httpkit
 
 import (
+	"errors"
 	"net/http"
 	"sync"
 	"time"
@@ -101,6 +102,13 @@ func Recoverer(logger logrus.FieldLogger) func(http.Handler) http.Handler {
 			defer func() {
 				if v := recover(); v != nil {
 					switch vv := v.(type) {
+					case *Error:
+						if err := errors.Unwrap(vv); err != nil {
+							logger.WithError(vv).Error("recover panic")
+						}
+
+						WriteError(w, vv)
+						return
 					case error:
 						logger.WithError(vv).Error("recover panic")
 					default:
