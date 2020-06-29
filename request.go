@@ -11,15 +11,16 @@ import (
 	"github.com/gorilla/schema"
 )
 
-var decoder = schema.NewDecoder()
+// RequestDecoder decode request values
+var RequestDecoder = schema.NewDecoder()
 
 func init() {
-	decoder.IgnoreUnknownKeys(true)
+	RequestDecoder.IgnoreUnknownKeys(true)
 }
 
 // ScanValues 从url.Values解析数据
 func ScanValues(dst interface{}, values url.Values) error {
-	if err := decoder.Decode(dst, values); err != nil {
+	if err := RequestDecoder.Decode(dst, values); err != nil {
 		return fmt.Errorf("decode values, %w", err)
 	}
 
