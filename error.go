@@ -88,15 +88,26 @@ func (e *Error) WithBytes(data []byte) *Error {
 }
 
 // WriteError write error response
-func WriteError(w http.ResponseWriter, err *Error) {
-	w.WriteHeader(err.Code)
-	if h := err.Header; h != nil {
-		for key := range h {
-			w.Header().Set(key, h.Get(key))
+func WriteError(w http.ResponseWriter, httpError *Error) error {
+	statusCode := httpError.Code
+	if statusCode == 0 {
+		statusCode = http.StatusInternalServerError
+	}
+	w.WriteHeader(statusCode)
+
+	if h := httpError.Header; h != nil {
+		for key, values := range h {
+			for _, value := range values {
+				w.Header().Add(key, value)
+			}
 		}
 	}
 
-	if r := err.Body; r != nil {
-		io.Copy(w, r)
+	if r := httpError.Body; r != nil {
+		if _, err := io.Copy(w, r); err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
