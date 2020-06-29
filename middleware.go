@@ -103,7 +103,8 @@ func Recoverer(logger logrus.FieldLogger) func(http.Handler) http.Handler {
 				if v := recover(); v != nil {
 					switch vv := v.(type) {
 					case *Error:
-						if err := errors.Unwrap(vv); err != nil {
+						// 只记录500及以上错误的根因
+						if err, code := errors.Unwrap(vv), vv.StatusCode(); err != nil && code >= http.StatusInternalServerError {
 							logger.WithError(err).Error("recover panic")
 						}
 

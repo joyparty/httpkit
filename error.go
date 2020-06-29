@@ -11,29 +11,29 @@ import (
 
 // Error http错误
 type Error struct {
-	Code   int
 	Header http.Header
 	Body   io.Reader
+	code   int
 	err    error
 }
 
 // NewError 创建http错误
 func NewError(code int) *Error {
 	return &Error{
-		Code: code,
+		code: code,
 	}
 }
 
 // WrapError 把其它错误转换为http错误
 func WrapError(err error) *Error {
 	return &Error{
-		Code: http.StatusInternalServerError,
+		code: http.StatusInternalServerError,
 		err:  err,
 	}
 }
 
 func (e Error) Error() string {
-	return http.StatusText(e.Code)
+	return http.StatusText(e.StatusCode())
 }
 
 // Unwrap returns cause error
@@ -41,9 +41,17 @@ func (e Error) Unwrap() error {
 	return e.err
 }
 
+// StatusCode returns response status code
+func (e Error) StatusCode() int {
+	if code := e.code; code > 0 {
+		return code
+	}
+	return http.StatusInternalServerError
+}
+
 // WithStatus set response status code
 func (e *Error) WithStatus(code int) *Error {
-	e.Code = code
+	e.code = code
 	return e
 }
 
@@ -89,11 +97,7 @@ func (e *Error) WithBytes(data []byte) *Error {
 
 // WriteError write error response
 func WriteError(w http.ResponseWriter, httpError *Error) error {
-	statusCode := httpError.Code
-	if statusCode == 0 {
-		statusCode = http.StatusInternalServerError
-	}
-	w.WriteHeader(statusCode)
+	w.WriteHeader(httpError.StatusCode())
 
 	if h := httpError.Header; h != nil {
 		for key, values := range h {
