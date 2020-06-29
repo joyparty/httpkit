@@ -27,7 +27,6 @@ func ScanValues(dst interface{}, values url.Values) error {
 	if _, err := govalidator.ValidateStruct(dst); err != nil {
 		return fmt.Errorf("validate values, %w", err)
 	}
-
 	return nil
 }
 
@@ -41,23 +40,22 @@ func MustScanValue(dst interface{}, values url.Values) {
 }
 
 // ScanJSON decode json and validate
-func ScanJSON(dst interface{}, r io.Reader) (int, error) {
+func ScanJSON(dst interface{}, r io.Reader) error {
 	if err := json.NewDecoder(r).Decode(dst); err != nil {
-		return http.StatusNotAcceptable, fmt.Errorf("json decode, %w", err)
+		return fmt.Errorf("json decode, %w", err)
 	}
 
 	if _, err := govalidator.ValidateStruct(dst); err != nil {
-		return http.StatusBadRequest, fmt.Errorf("validate json, %w", err)
+		return fmt.Errorf("validate values, %w", err)
 	}
-
-	return 0, nil
+	return nil
 }
 
 // MustScanJSON json decode request body, panic when error
 func MustScanJSON(dst interface{}, r io.Reader) {
-	if code, err := ScanJSON(dst, r); err != nil {
+	if err := ScanJSON(dst, r); err != nil {
 		panic(WrapError(err).
-			WithStatus(code).
+			WithStatus(http.StatusBadRequest).
 			WithString(err.Error()))
 	}
 }
