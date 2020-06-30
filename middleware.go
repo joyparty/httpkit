@@ -2,6 +2,7 @@ package httpkit
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -104,10 +105,18 @@ func Recoverer(logger logrus.FieldLogger) func(http.Handler) http.Handler {
 					switch vv := v.(type) {
 					case *Error:
 						if err := errors.Unwrap(vv); err != nil {
+							entry := logger.WithError(err)
+							if f, ok := vv.Caller(); ok {
+								entry = entry.WithFields(logrus.Fields{
+									logrus.FieldKeyFile: fmt.Sprintf("%s:%d", f.File, f.Line),
+									logrus.FieldKeyFunc: f.Function,
+								})
+							}
+
 							if code := vv.StatusCode(); code >= http.StatusInternalServerError {
-								logger.WithError(err).Error("recover http error")
+								entry.Error("recover http error")
 							} else {
-								logger.WithError(err).Debug("recover http error")
+								entry.Debug("recover http error")
 							}
 						}
 
