@@ -123,8 +123,6 @@ func (e *Error) WithBytes(data []byte) *Error {
 
 // WriteError write error response
 func WriteError(w http.ResponseWriter, httpError *Error) error {
-	w.WriteHeader(httpError.StatusCode())
-
 	if h := httpError.Header(); h != nil {
 		for key, values := range h {
 			for _, value := range values {
@@ -133,6 +131,7 @@ func WriteError(w http.ResponseWriter, httpError *Error) error {
 			}
 		}
 	}
+	w.WriteHeader(httpError.StatusCode())
 
 	if r := httpError.Body(); r != nil {
 		if _, err := io.Copy(w, r); err != nil {
