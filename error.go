@@ -9,15 +9,7 @@ import (
 	"net/http"
 	"runtime"
 	"strings"
-	"sync"
 )
-
-var (
-	callerInitOnce sync.Once
-	wrapFunc       string
-)
-
-const maximumCallerDepth int = 25
 
 // Error http错误
 type Error struct {
