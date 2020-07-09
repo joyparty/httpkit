@@ -146,8 +146,6 @@ func GetCaller() *runtime.Frame {
 	pc = pc[:n]
 	frames := runtime.CallersFrames(pc)
 
-	for {
-		frame, _ := frames.Next()
-		return &frame
-	}
+	frame, _ := frames.Next()
+	return &frame
 }
