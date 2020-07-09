@@ -3,6 +3,7 @@ package httpkit
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -39,7 +40,7 @@ func WrapError(err error) *Error {
 	return &Error{
 		code:   http.StatusInternalServerError,
 		err:    err,
-		caller: getCaller(),
+		caller: GetCaller(),
 	}
 }
 
@@ -142,53 +143,19 @@ func WriteError(w http.ResponseWriter, httpError *Error) error {
 	return nil
 }
 
-// getPackageName reduces a fully qualified function name to the package name
-// There really ought to be to be a better way...
-func getPackageName(f string) string {
+// GetCaller 返回当前函数的调用者
+func GetCaller() *runtime.Frame {
+	pc := make([]uintptr, 2)
+	n := runtime.Callers(3, pc)
+	if n == 0 {
+		panic(errors.New("unknown caller"))
+	}
+
+	pc = pc[:n]
+	frames := runtime.CallersFrames(pc)
+
 	for {
-		lastPeriod := strings.LastIndex(f, ".")
-		lastSlash := strings.LastIndex(f, "/")
-		if lastPeriod > lastSlash {
-			f = f[:lastPeriod]
-		} else {
-			break
-		}
+		frame, _ := frames.Next()
+		return &frame
 	}
-
-	return f
-}
-
-// getCaller retrieves the name of the first non-logrus calling function
-func getCaller() *runtime.Frame {
-	// cache this package's fully-qualified name
-	callerInitOnce.Do(func() {
-		pcs := make([]uintptr, maximumCallerDepth)
-		_ = runtime.Callers(0, pcs)
-
-		// dynamic get the package name and the minimum caller depth
-		for i := 0; i < maximumCallerDepth; i++ {
-			funcName := runtime.FuncForPC(pcs[i]).Name()
-			if strings.Contains(funcName, "getCaller") {
-				wrapFunc = fmt.Sprintf("%s.WrapError", getPackageName(funcName))
-				break
-			}
-		}
-	})
-
-	pcs := make([]uintptr, maximumCallerDepth)
-	depth := runtime.Callers(0, pcs)
-	frames := runtime.CallersFrames(pcs[:depth])
-
-	// 返回WrapError后的下一条
-	var returnNext bool
-	for f, again := frames.Next(); again; f, again = frames.Next() {
-		if returnNext {
-			return &f
-		}
-
-		returnNext = f.Function == wrapFunc
-	}
-
-	// if we got here, we failed to find the caller's context
-	return nil
 }
