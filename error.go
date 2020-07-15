@@ -98,13 +98,12 @@ func (e *Error) WithBody(r io.Reader) *Error {
 
 // WithJSON set json content as response body
 func (e *Error) WithJSON(v interface{}) error {
-	e.WithHeader("Content-Type", "application/json")
-
 	data, err := json.Marshal(v)
 	if err != nil {
 		return fmt.Errorf("encode error response, %w", err)
 	}
 
+	e.WithHeader("Content-Type", "application/json")
 	return e.WithBytes(data)
 }
 
