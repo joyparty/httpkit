@@ -68,30 +68,29 @@ func LogRequest(logger logrus.FieldLogger) func(http.Handler) http.Handler {
 			ww := responsePool.Get().(*responseWrapper)
 			ww.ResponseWriter = w
 			ww.status = 0
-
-			start := time.Now()
 			defer func() {
-				status := ww.StatusCode()
-
-				fl := RequestLogger(w, r, logger).
-					WithFields(logrus.Fields{
-						"duration": time.Now().Sub(start).Milliseconds(),
-						"status":   status,
-					})
-
-				if status >= 500 {
-					fl.Error("http request")
-				} else if status >= 400 {
-					fl.Warn("http request")
-				} else {
-					fl.Info("http request")
-				}
-
 				ww.ResponseWriter = nil
 				responsePool.Put(ww)
 			}()
 
+			start := time.Now()
+
 			next.ServeHTTP(ww, r)
+
+			status := ww.StatusCode()
+			fl := RequestLogger(w, r, logger).
+				WithFields(logrus.Fields{
+					"duration": time.Since(start).Microseconds(),
+					"status":   status,
+				})
+
+			if status >= 500 {
+				fl.Error("http request")
+			} else if status >= 400 {
+				fl.Warn("http request")
+			} else {
+				fl.Info("http request")
+			}
 		})
 	}
 }
