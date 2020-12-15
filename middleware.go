@@ -110,6 +110,11 @@ func Recoverer(logger logrus.FieldLogger) func(http.Handler) http.Handler {
 									logrus.FieldKeyFile: fmt.Sprintf("%s:%d", f.File, f.Line),
 									logrus.FieldKeyFunc: f.Function,
 								})
+							} else {
+								entry = entry.WithFields(logrus.Fields{
+									"method": r.Method,
+									"uri":    r.URL.Path,
+								})
 							}
 
 							if code := vv.StatusCode(); code >= http.StatusInternalServerError {
@@ -124,9 +129,19 @@ func Recoverer(logger logrus.FieldLogger) func(http.Handler) http.Handler {
 						}
 						return
 					case error:
-						logger.WithError(vv).Error("recover panic")
+						logger.WithError(vv).
+							WithFields(logrus.Fields{
+								"method": r.Method,
+								"uri":    r.URL.Path,
+							}).
+							Error("recover panic")
 					default:
-						logger.WithField("error", v).Error("recover panic")
+						logger.WithField("error", v).
+							WithFields(logrus.Fields{
+								"method": r.Method,
+								"uri":    r.URL.Path,
+							}).
+							Error("recover panic")
 					}
 
 					w.WriteHeader(http.StatusInternalServerError)
