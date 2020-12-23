@@ -122,6 +122,11 @@ func (e *Error) WithBytes(data []byte) *Error {
 	return e
 }
 
+// Panic with error
+func (e *Error) Panic() {
+	panic(e)
+}
+
 // WriteError write error response
 func WriteError(w http.ResponseWriter, httpError *Error) error {
 	if h := httpError.Header(); h != nil {
