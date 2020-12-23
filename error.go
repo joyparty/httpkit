@@ -36,6 +36,15 @@ func WrapError(err error) *Error {
 	}
 }
 
+// WrapErrorf 以指定的格式把错误转换为http错误
+func WrapErrorf(format string, err error) *Error {
+	return &Error{
+		code:   http.StatusInternalServerError,
+		err:    fmt.Errorf(format, err),
+		caller: GetCaller(),
+	}
+}
+
 func (e Error) Error() string {
 	return http.StatusText(e.StatusCode())
 }
