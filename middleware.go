@@ -80,7 +80,7 @@ func LogRequest(logger logrus.FieldLogger) func(http.Handler) http.Handler {
 			status := ww.StatusCode()
 			fl := RequestLogger(w, r, logger).
 				WithFields(logrus.Fields{
-					"duration": time.Since(start).Microseconds(),
+					"duration": time.Since(start).Milliseconds(),
 					"status":   status,
 				})
 
