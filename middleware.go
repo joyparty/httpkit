@@ -1,9 +1,13 @@
 package httpkit
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -42,6 +46,12 @@ var (
 			return &responseWrapper{}
 		},
 	}
+
+	requestBodyPool = sync.Pool{
+		New: func() interface{} {
+			return &bytes.Buffer{}
+		},
+	}
 )
 
 type responseWrapper struct {
@@ -75,6 +85,19 @@ func LogRequest(logger logrus.FieldLogger) func(http.Handler) http.Handler {
 
 			start := time.Now()
 
+			var rBody *bytes.Buffer
+			if strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
+				if n, _ := strconv.Atoi(r.Header.Get("Content-Length")); n > 0 && n <= 8192 {
+					rBody = requestBodyPool.Get().(*bytes.Buffer)
+					rBody.Reset()
+					defer func() {
+						requestBodyPool.Put(rBody)
+					}()
+
+					r.Body = io.NopCloser(io.TeeReader(r.Body, rBody))
+				}
+			}
+
 			next.ServeHTTP(ww, r)
 
 			status := ww.StatusCode()
@@ -83,6 +106,9 @@ func LogRequest(logger logrus.FieldLogger) func(http.Handler) http.Handler {
 					"duration": time.Since(start).Milliseconds(),
 					"status":   status,
 				})
+			if rBody != nil && rBody.Len() > 0 {
+				fl = fl.WithField("body", rBody.String())
+			}
 
 			if status >= 500 {
 				fl.Error("http request")
