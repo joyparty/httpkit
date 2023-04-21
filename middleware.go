@@ -2,15 +2,16 @@ package httpkit
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -155,20 +156,24 @@ func Recoverer(logger logrus.FieldLogger) func(http.Handler) http.Handler {
 						}
 						return
 					case error:
-						logger.WithError(vv).
-							WithFields(logrus.Fields{
-								"method": r.Method,
-								"uri":    r.URL.Path,
-							}).
-							Error("recover panic")
+						logger = logger.WithError(vv)
 					default:
-						logger.WithField("error", v).
-							WithFields(logrus.Fields{
-								"method": r.Method,
-								"uri":    r.URL.Path,
-							}).
-							Error("recover panic")
+						logger = logger.WithField("error", v)
 					}
+
+					logger = logger.WithFields(logrus.Fields{
+						"method": r.Method,
+						"uri":    r.URL.Path,
+					})
+
+					if _, ok := v.(interface {
+						StackTrace() errors.StackTrace
+					}); !ok {
+						stack := debug.Stack()
+						logger = logger.WithField("trace", formatStack(stack))
+					}
+
+					logger.Error("recover panic")
 
 					w.WriteHeader(http.StatusInternalServerError)
 				}
@@ -177,4 +182,18 @@ func Recoverer(logger logrus.FieldLogger) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+func formatStack(s []byte) []string {
+	return strings.Split(
+		strings.ReplaceAll(
+			strings.TrimLeft(
+				string(s),
+				"\n",
+			),
+			"\n\t",
+			" ",
+		),
+		"\n",
+	)
 }
