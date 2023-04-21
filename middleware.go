@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"runtime"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -155,11 +157,17 @@ func Recoverer(logger logrus.FieldLogger) func(http.Handler) http.Handler {
 						}
 						return
 					case error:
+						fields := logrus.Fields{
+							"method": r.Method,
+							"uri":    r.URL.Path,
+						}
+
+						if _, ok := vv.(runtime.Error); ok {
+							fields["stack"] = string(debug.Stack())
+						}
+
 						logger.WithError(vv).
-							WithFields(logrus.Fields{
-								"method": r.Method,
-								"uri":    r.URL.Path,
-							}).
+							WithFields(fields).
 							Error("recover panic")
 					default:
 						logger.WithField("error", v).
